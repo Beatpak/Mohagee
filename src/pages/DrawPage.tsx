@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import {
@@ -25,6 +25,17 @@ export function DrawPage() {
   );
 
   const nextCategory = activeSession ? getNextCategory(activeSession) : null;
+  const isAllDrawn =
+    activeSession?.status === "in_progress" && nextCategory === null;
+
+  useEffect(() => {
+    if (!isAllDrawn || justDrawn) return;
+    const timer = setTimeout(() => {
+      finishSession();
+      navigate("/result");
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [isAllDrawn, justDrawn, finishSession, navigate]);
 
   const handleStart = () => {
     setError(null);

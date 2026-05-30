@@ -103,9 +103,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const finishSession = useCallback(() => {
-    if (!activeSession || !isSessionComplete(activeSession)) return;
-    completeSession({ ...activeSession, status: "completed" });
-  }, [activeSession, completeSession]);
+    const session = loadActiveSession();
+    if (!session || !isSessionComplete(session)) return;
+    completeSession({ ...session, status: "completed" });
+  }, [completeSession]);
 
   const drawCurrentStep = useCallback(():
     | { ok: true; value: string; isComplete: boolean }
