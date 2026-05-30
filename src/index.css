@@ -1,15 +1,19 @@
 :root {
-  --bg: #fff8f5;
-  --surface: #ffffff;
-  --text: #2d1f1a;
-  --muted: #7a655c;
-  --primary: #e85d4c;
-  --primary-dark: #c94a3b;
-  --border: #f0ddd6;
-  --shadow: 0 8px 24px rgba(45, 31, 26, 0.08);
-  --radius: 16px;
+  --bg: #faf9f5;
+  --surface: #fff;
+  --text: #1f1e1d;
+  --muted: #87847e;
+  --primary: #4f7da3;
+  --primary-dark: #3b6488;
+  --border: #ece8e0;
+  --primary-tint: #e9f0f6;
+  --faint: #b4b1aa;
+  --line-strong: #ddd8cd;
+  --shadow: 0 8px 24px rgba(31, 30, 29, 0.08);
+  --radius: 18px;
   --nav-h: 64px;
   --header-h: 56px;
+  --serif: "Noto Serif KR", Georgia, "Times New Roman", serif;
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -52,13 +56,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 248, 245, 0.92);
+  background: rgba(250, 249, 245, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 
 .app-title {
   margin: 0;
+  font-family: var(--serif);
   font-size: 1.125rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -108,6 +113,7 @@ body {
 
 .page-heading {
   margin: 0;
+  font-family: var(--serif);
   font-size: 1.375rem;
   font-weight: 700;
 }
@@ -133,8 +139,8 @@ body {
 }
 
 .card--highlight {
-  border-color: #f5c4bc;
-  background: linear-gradient(180deg, #fff 0%, #fff5f2 100%);
+  border-color: #cfe0ec;
+  background: linear-gradient(180deg, #fff 0%, #f1f6fa 100%);
 }
 
 .eyebrow {
@@ -193,7 +199,7 @@ body {
 }
 
 .btn--secondary {
-  background: #fde8e4;
+  background: var(--primary-tint);
   color: var(--primary-dark);
 }
 
@@ -230,7 +236,7 @@ body {
 .alert {
   margin: 0;
   padding: 0.75rem 1rem;
-  background: #fff0ee;
+  background: var(--primary-tint);
   border-radius: 10px;
   color: var(--primary-dark);
   font-size: 0.9375rem;
@@ -263,8 +269,8 @@ body {
 
 .steps__item--done {
   color: var(--primary-dark);
-  background: #fde8e4;
-  border-color: #f5c4bc;
+  background: var(--primary-tint);
+  border-color: #cfe0ec;
 }
 
 .steps__item--current {
@@ -289,6 +295,7 @@ body {
 }
 
 .picked-chip__value {
+  font-family: var(--serif);
   font-size: 1.0625rem;
   font-weight: 700;
 }
@@ -315,22 +322,47 @@ body {
   color: var(--muted);
 }
 
+.draw-shuffle {
+  margin: 0.5rem 0;
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--faint);
+  min-height: 2.5rem;
+  animation: shuffleFlicker 0.09s steps(1) infinite;
+}
+
+@keyframes shuffleFlicker {
+  0% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.55;
+  }
+}
+
 .draw-reveal {
   margin: 0.5rem 0;
+  font-family: var(--serif);
   font-size: 2rem;
   font-weight: 800;
   color: var(--primary);
-  animation: pop 0.35s ease;
+  animation: reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes pop {
-  from {
+@keyframes reveal {
+  0% {
     opacity: 0;
-    transform: scale(0.9);
+    transform: translateY(10px);
+    filter: blur(4px);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
+    filter: blur(0);
   }
 }
 
@@ -357,6 +389,7 @@ body {
 }
 
 .result-list strong {
+  font-family: var(--serif);
   font-size: 1.125rem;
   text-align: right;
 }
@@ -418,7 +451,7 @@ body {
 .tabs__btn--active {
   border-color: var(--primary);
   color: var(--primary);
-  background: #fff5f2;
+  background: #f1f6fa;
 }
 
 .tabs__count {
@@ -445,6 +478,7 @@ body {
 .input:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--primary-tint);
 }
 
 .item-list {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import {
@@ -23,6 +23,9 @@ export function DrawPage() {
   const [justDrawn, setJustDrawn] = useState<{ category: Category; value: string } | null>(
     null,
   );
+  const [drawing, setDrawing] = useState(false);
+  const [shuffleText, setShuffleText] = useState("");
+  const shuffleTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const nextCategory = activeSession ? getNextCategory(activeSession) : null;
   const isAllDrawn =
@@ -37,6 +40,14 @@ export function DrawPage() {
     return () => clearTimeout(timer);
   }, [isAllDrawn, justDrawn, finishSession, navigate]);
 
+  useEffect(() => {
+    return () => {
+      if (shuffleTimer.current) {
+        clearInterval(shuffleTimer.current);
+      }
+    };
+  }, []);
+
   const handleStart = () => {
     setError(null);
     setJustDrawn(null);
@@ -48,6 +59,12 @@ export function DrawPage() {
 
   const handleCancel = () => {
     if (window.confirm("진행 중인 데이트를 취소할까요? 뽑은 내용은 저장되지 않아요.")) {
+      if (shuffleTimer.current) {
+        clearInterval(shuffleTimer.current);
+        shuffleTimer.current = null;
+      }
+      setDrawing(false);
+      setShuffleText("");
       cancelSession();
       setJustDrawn(null);
       setError(null);
@@ -55,27 +72,47 @@ export function DrawPage() {
   };
 
   const handleDraw = () => {
-    if (!nextCategory) return;
+    if (!nextCategory || drawing) return;
     setError(null);
-    const result = drawCurrentStep();
-    if (!result.ok) {
-      setError(result.reason);
-      return;
-    }
-    setJustDrawn({ category: nextCategory, value: result.value });
-    if (result.isComplete) {
-      setTimeout(() => {
-        finishSession();
-        navigate("/result");
-      }, 800);
-    }
+
+    const pool = items[nextCategory];
+    if (pool.length === 0) return;
+
+    const category = nextCategory;
+    setDrawing(true);
+    setShuffleText(pool[Math.floor(Math.random() * pool.length)] ?? "");
+
+    shuffleTimer.current = setInterval(() => {
+      setShuffleText(pool[Math.floor(Math.random() * pool.length)] ?? "");
+    }, 75);
+
+    setTimeout(() => {
+      if (shuffleTimer.current) {
+        clearInterval(shuffleTimer.current);
+        shuffleTimer.current = null;
+      }
+      setDrawing(false);
+
+      const result = drawCurrentStep();
+      if (!result.ok) {
+        setError(result.reason);
+        return;
+      }
+      setJustDrawn({ category, value: result.value });
+      if (result.isComplete) {
+        setTimeout(() => {
+          finishSession();
+          navigate("/result");
+        }, 800);
+      }
+    }, 780);
   };
 
   const handleNextStep = () => {
     setJustDrawn(null);
   };
 
-  const canDraw = nextCategory && items[nextCategory].length > 0 && !justDrawn;
+  const hasPool = Boolean(nextCategory && items[nextCategory].length > 0);
 
   if (lastCompleted && !activeSession && !justDrawn) {
     return (
@@ -163,10 +200,14 @@ export function DrawPage() {
       {nextCategory && !justDrawn && (
         <div className="draw-panel">
           <p className="draw-panel__label">{CATEGORY_LABELS[nextCategory]} 뽑기</p>
-          {!canDraw ? (
+          {!hasPool ? (
             <p className="alert">
               {CATEGORY_LABELS[nextCategory]} 항목이 없어요.{" "}
               <Link to="/items">항목 관리</Link>에서 추가해 주세요.
+            </p>
+          ) : drawing ? (
+            <p className="draw-shuffle" aria-live="polite">
+              {shuffleText}
             </p>
           ) : (
             <>
