@@ -14,8 +14,12 @@ npm run dev
 ## Supabase 설정
 
 1. [supabase.com](https://supabase.com)에서 프로젝트 생성
-2. SQL Editor에서 [`supabase/migrations/001_shared_items.sql`](supabase/migrations/001_shared_items.sql) 실행
+2. SQL Editor에서 마이그레이션을 **순서대로** 실행
+   - [`supabase/migrations/001_shared_items.sql`](supabase/migrations/001_shared_items.sql)
+   - [`supabase/migrations/002_normalize_date_items.sql`](supabase/migrations/002_normalize_date_items.sql)
 3. Dashboard → Settings → API에서 URL과 anon key를 복사해 `.env`에 설정
+
+항목 데이터는 `date_items` 테이블(row 단위)에 저장됩니다. 시드 버전은 `app_meta`에 저장됩니다.
 
 ```
 VITE_SUPABASE_URL=https://xxxx.supabase.co
@@ -47,7 +51,7 @@ Vercel 배포 시에도 동일한 환경 변수를 Project Settings → Environm
 - **디저트**: 카페·디저트 카테고리 분리 ([`src/data/desserts.ts`](src/data/desserts.ts))
 - **데이트거리**: [`src/data/dateSpots.ts`](src/data/dateSpots.ts)
 
-첫 Supabase row 생성 시 주입되며, 시드 버전 업데이트 시 자동 반영됩니다.
+첫 Supabase 초기화 시 `date_items`에 시드가 주입되며, 시드 버전 업데이트 시 자동 반영됩니다.
 
 ## 빌드
 
