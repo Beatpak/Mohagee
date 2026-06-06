@@ -17,6 +17,7 @@ export function ResultPage() {
         <ResultSummary
           region={lastCompleted.region}
           food={lastCompleted.food}
+          dessert={lastCompleted.dessert}
           dateSpot={lastCompleted.dateSpot}
         />
         <p className="muted">{formatDateTime(lastCompleted.completedAt)}</p>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import {
   CATEGORY_LABELS,
+  CATEGORY_ORDER,
   getNextCategory,
   type Category,
 } from "../types";
@@ -11,6 +12,9 @@ export function DrawPage() {
   const {
     activeSession,
     lastCompleted,
+    itemsLoading,
+    itemsError,
+    retryLoadItems,
     startNewSession,
     cancelSession,
     drawCurrentStep,
@@ -123,6 +127,7 @@ export function DrawPage() {
           <ResultSummary
             region={lastCompleted.region}
             food={lastCompleted.food}
+            dessert={lastCompleted.dessert}
             dateSpot={lastCompleted.dateSpot}
           />
           <p className="muted">
@@ -130,7 +135,12 @@ export function DrawPage() {
           </p>
         </div>
         <div className="button-row">
-          <button type="button" className="btn btn--primary" onClick={handleStart}>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={handleStart}
+            disabled={itemsLoading || Boolean(itemsError)}
+          >
             새 데이트
           </button>
           <button
@@ -155,13 +165,27 @@ export function DrawPage() {
       <section className="page">
         <div className="hero">
           <p className="hero__text">
-            지역 → 음식 → 데이트거리 순으로
+            지역 → 음식 → 디저트 → 데이트거리 순으로
             <br />
             각각 한 번씩만 뽑아요.
           </p>
         </div>
+        {itemsLoading && <p className="muted">항목을 불러오는 중…</p>}
+        {itemsError && (
+          <div className="alert">
+            <p>{itemsError}</p>
+            <button type="button" className="btn btn--ghost btn--small" onClick={retryLoadItems}>
+              다시 시도
+            </button>
+          </div>
+        )}
         {error && <p className="alert">{error}</p>}
-        <button type="button" className="btn btn--primary btn--large" onClick={handleStart}>
+        <button
+          type="button"
+          className="btn btn--primary btn--large"
+          onClick={handleStart}
+          disabled={itemsLoading || Boolean(itemsError)}
+        >
           새 데이트 시작
         </button>
       </section>
@@ -176,6 +200,7 @@ export function DrawPage() {
         <PickedChip label="지역" value={activeSession.region} />
       )}
       {activeSession.food && <PickedChip label="음식" value={activeSession.food} />}
+      {activeSession.dessert && <PickedChip label="디저트" value={activeSession.dessert} />}
       {activeSession.dateSpot && (
         <PickedChip label="데이트거리" value={activeSession.dateSpot} />
       )}
@@ -233,14 +258,13 @@ function ProgressSteps({
   session,
   current,
 }: {
-  session: { region?: string; food?: string; dateSpot?: string };
+  session: { region?: string; food?: string; dessert?: string; dateSpot?: string };
   current: Category | null;
 }) {
-  const steps: { key: Category; done: boolean }[] = [
-    { key: "region", done: Boolean(session.region) },
-    { key: "food", done: Boolean(session.food) },
-    { key: "dateSpot", done: Boolean(session.dateSpot) },
-  ];
+  const steps: { key: Category; done: boolean }[] = CATEGORY_ORDER.map((key) => ({
+    key,
+    done: Boolean(session[key]),
+  }));
 
   return (
     <ol className="steps" aria-label="뽑기 진행">
@@ -268,10 +292,12 @@ function PickedChip({ label, value }: { label: string; value: string }) {
 export function ResultSummary({
   region,
   food,
+  dessert,
   dateSpot,
 }: {
   region?: string;
   food?: string;
+  dessert?: string;
   dateSpot?: string;
 }) {
   return (
@@ -283,6 +309,10 @@ export function ResultSummary({
       <li>
         <span>음식</span>
         <strong>{food ?? "-"}</strong>
+      </li>
+      <li>
+        <span>디저트</span>
+        <strong>{dessert ?? "-"}</strong>
       </li>
       <li>
         <span>데이트거리</span>

@@ -1,11 +1,14 @@
 import type { ItemsByCategory } from "../types";
+import { DATE_SPOTS } from "./dateSpots";
+import { DESSERT_CATEGORIES } from "./desserts";
 import { FOOD_CATEGORIES } from "./foods";
 import { REGIONS_WITHIN_1H_FROM_SNU } from "./regions";
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 5;
 
 export const SEED_ITEMS: ItemsByCategory = {
   region: [...REGIONS_WITHIN_1H_FROM_SNU],
   food: [...FOOD_CATEGORIES],
-  dateSpot: ["영화관", "한강 산책", "전시회", "방탈출", "카페 투어", "볼링"],
+  dessert: [...DESSERT_CATEGORIES],
+  dateSpot: [...DATE_SPOTS],
 };

@@ -3,7 +3,7 @@ import { useApp } from "../context/AppContext";
 import { CATEGORY_LABELS, CATEGORY_ORDER, type Category } from "../types";
 
 export function ItemsPage() {
-  const { items, addItem, removeItem } = useApp();
+  const { items, itemsLoading, itemsError, retryLoadItems, addItem, removeItem } = useApp();
   const [tab, setTab] = useState<Category>("region");
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +25,16 @@ export function ItemsPage() {
     <section className="page">
       <h2 className="page-heading">항목 관리</h2>
       <p className="muted">추가·삭제가 가능해요. 수정은 삭제 후 다시 추가해 주세요.</p>
+
+      {itemsLoading && <p className="muted">항목을 불러오는 중…</p>}
+      {itemsError && (
+        <div className="alert">
+          <p>{itemsError}</p>
+          <button type="button" className="btn btn--ghost btn--small" onClick={retryLoadItems}>
+            다시 시도
+          </button>
+        </div>
+      )}
 
       <div className="tabs" role="tablist" aria-label="카테고리">
         {CATEGORY_ORDER.map((category) => (
@@ -54,8 +64,9 @@ export function ItemsPage() {
           onChange={(e) => setInput(e.target.value)}
           maxLength={50}
           aria-label={`${CATEGORY_LABELS[tab]} 새 항목`}
+          disabled={itemsLoading || Boolean(itemsError)}
         />
-        <button type="submit" className="btn btn--primary">
+        <button type="submit" className="btn btn--primary" disabled={itemsLoading || Boolean(itemsError)}>
           추가
         </button>
       </form>

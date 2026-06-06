@@ -39,6 +39,7 @@ export function HistoryPage() {
             <ResultSummary
               region={entry.region}
               food={entry.food}
+              dessert={entry.dessert}
               dateSpot={entry.dateSpot}
             />
           </li>

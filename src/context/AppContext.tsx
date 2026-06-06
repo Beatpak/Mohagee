@@ -2,11 +2,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import {
+  CATEGORY_LABELS,
   getNextCategory,
   isSessionComplete,
   type Category,
@@ -14,18 +16,28 @@ import {
   type HistoryEntry,
   type ItemsByCategory,
 } from "../types";
+import { isSupabaseConfigured } from "../lib/supabase";
+import { fetchItems, saveItems as saveRemoteItems, subscribeItems } from "../storage/remoteItems";
 import {
   loadActiveSession,
   loadHistory,
-  loadItems,
   saveActiveSession,
   saveHistory,
-  saveItems,
 } from "../storage/storage";
 import { pickRandom } from "../utils/random";
 
+const EMPTY_ITEMS: ItemsByCategory = {
+  region: [],
+  food: [],
+  dessert: [],
+  dateSpot: [],
+};
+
 type AppContextValue = {
   items: ItemsByCategory;
+  itemsLoading: boolean;
+  itemsError: string | null;
+  retryLoadItems: () => void;
   activeSession: DrawSession | null;
   history: HistoryEntry[];
   lastCompleted: HistoryEntry | null;
@@ -48,16 +60,66 @@ function createSessionId(): string {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ItemsByCategory>(() => loadItems());
+  const [items, setItems] = useState<ItemsByCategory>(EMPTY_ITEMS);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [activeSession, setActiveSession] = useState<DrawSession | null>(() =>
     loadActiveSession(),
   );
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory());
   const [lastCompleted, setLastCompleted] = useState<HistoryEntry | null>(null);
 
-  const persistItems = useCallback((next: ItemsByCategory) => {
+  const retryLoadItems = useCallback(() => {
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setItemsLoading(false);
+      setItemsError("Supabase 환경 변수가 설정되지 않았어요. .env 파일을 확인해 주세요.");
+      return;
+    }
+
+    let cancelled = false;
+    setItemsLoading(true);
+    setItemsError(null);
+
+    fetchItems()
+      .then((data) => {
+        if (!cancelled) {
+          setItems(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setItemsError("항목을 불러오지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setItemsLoading(false);
+        }
+      });
+
+    const unsubscribe = subscribeItems((data) => {
+      if (!cancelled) {
+        setItems(data);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [loadAttempt]);
+
+  const persistItems = useCallback((next: ItemsByCategory, previous: ItemsByCategory) => {
     setItems(next);
-    saveItems(next);
+    saveRemoteItems(next).catch(() => {
+      setItems(previous);
+      setItemsError("항목 저장에 실패했어요. 다시 시도해 주세요.");
+    });
   }, []);
 
   const persistSession = useCallback((next: DrawSession | null) => {
@@ -71,6 +133,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startNewSession = useCallback((): { ok: true } | { ok: false; reason: string } => {
+    if (itemsLoading) {
+      return { ok: false, reason: "항목을 불러오는 중이에요. 잠시 후 다시 시도해 주세요." };
+    }
+    if (itemsError) {
+      return { ok: false, reason: "항목을 불러오지 못했어요. 다시 시도해 주세요." };
+    }
     if (activeSession?.status === "in_progress") {
       return { ok: false, reason: "진행 중인 데이트가 있어요. 이어하기 또는 취소 후 시작해 주세요." };
     }
@@ -81,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     persistSession(session);
     return { ok: true };
-  }, [activeSession, persistSession]);
+  }, [activeSession, itemsError, itemsLoading, persistSession]);
 
   const cancelSession = useCallback(() => {
     persistSession(null);
@@ -124,7 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (pool.length === 0) {
       return {
         ok: false,
-        reason: `${category === "region" ? "지역" : category === "food" ? "음식" : "데이트거리"} 항목이 없어요. 항목 관리에서 추가해 주세요.`,
+        reason: `${CATEGORY_LABELS[category]} 항목이 없어요. 항목 관리에서 추가해 주세요.`,
       };
     }
 
@@ -141,6 +209,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     (category: Category, label: string): { ok: true } | { ok: false; reason: string } => {
+      if (itemsLoading) {
+        return { ok: false, reason: "항목을 불러오는 중이에요." };
+      }
+      if (itemsError) {
+        return { ok: false, reason: "항목을 불러오지 못했어요. 다시 시도해 주세요." };
+      }
+
       const trimmed = label.trim();
       if (!trimmed) {
         return { ok: false, reason: "항목 이름을 입력해 주세요." };
@@ -152,21 +227,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...items,
         [category]: [...items[category], trimmed],
       };
-      persistItems(next);
+      persistItems(next, items);
       return { ok: true };
     },
-    [items, persistItems],
+    [items, itemsError, itemsLoading, persistItems],
   );
 
   const removeItem = useCallback(
     (category: Category, label: string) => {
+      if (itemsLoading || itemsError) return;
       const next = {
         ...items,
         [category]: items[category].filter((item) => item !== label),
       };
-      persistItems(next);
+      persistItems(next, items);
     },
-    [items, persistItems],
+    [items, itemsError, itemsLoading, persistItems],
   );
 
   const deleteHistoryEntry = useCallback(
@@ -183,6 +259,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       items,
+      itemsLoading,
+      itemsError,
+      retryLoadItems,
       activeSession,
       history,
       lastCompleted,
@@ -197,6 +276,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       items,
+      itemsLoading,
+      itemsError,
+      retryLoadItems,
       activeSession,
       history,
       lastCompleted,
